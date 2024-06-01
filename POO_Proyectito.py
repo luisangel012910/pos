@@ -18,8 +18,8 @@ class Producto:
 
 class Factura:
     FacturaID = 1
-    def __init__(self, cliente, fecha_emision):
-        self.id = Factura.FacturaID
+    def __init__(self, id, cliente, fecha_emision):
+        self.id = id
         self.cliente = cliente
         self.fecha_emision = fecha_emision
         self.productos = {}
@@ -46,15 +46,13 @@ def imprimirMenu(productos):
         print(f"{producto.id:<5}| {producto.desc:<17}| {producto.precio:^16}| {producto.stock:^5}")
     print("--------------------------------------------------")
     print("0. Finalizar compra")
-    print("99. Ver todas las facturas")
     print("--------------------------------------------------")
 
 def buscar_producto(productos, id):
     return productos.get(id, None)
 
 def facturar(facturas):
-    nombre_cliente = input("Ingrese su Nombre: ")
-    fecha_emision = datetime.now()
+    factura_id = Factura.FacturaID
     productos_disponibles = {
         1: Producto("Arroz", 50, 100),
         2: Producto("Habichuelas", 80, 80),
@@ -68,55 +66,74 @@ def facturar(facturas):
         10: Producto("Harina", 45, 85),
         11: Producto("Manzanas", 35, 65),
         12: Producto("Plátanos", 15, 100),
+        13: Producto("Pasta", 55, 75),
+        14: Producto("Jabón", 50, 80),
+        15: Producto("Papel higiénico", 65, 45),
     }
-    factura = Factura(nombre_cliente, fecha_emision)
+    
     while True:
-        carrito = {}
+        nombre_cliente = input("Ingrese el Nombre del Cliente: ")
+        fecha_emision = datetime.now()
+        factura = Factura(factura_id, nombre_cliente, fecha_emision)
         while True:
-            os.system("cls" if os.name == "nt" else "clear")
-            imprimirMenu(productos_disponibles)
-            opc = input("Ingrese el ID del producto que desea o seleccione una opción: ")
-            if opc == "0":
-                break
-            elif opc == "99":
-                ver_facturas(facturas)
-            else:
-                opc = int(opc)
-                producto = buscar_producto(productos_disponibles, opc)
-                if producto:
-                    cantidad = int(input(f"Ingrese la cantidad de '{producto.desc}' que desea: "))
-                    if cantidad > 0:
-                        if cantidad <= producto.stock:
-                            factura.agregar_producto(producto, cantidad)
-                            producto.stock -= cantidad
-                        else:
-                            print(f"No hay suficiente stock de '{producto.desc}'. Stock disponible: {producto.stock}.")
-                    else:
-                        print("La cantidad ingresada debe ser mayor que cero.")
+            carrito = {}
+            while True:
+                os.system("cls" if os.name == "nt" else "clear")
+                imprimirMenu(productos_disponibles)
+                opc = input("Ingrese el ID del producto que desea o seleccione '0' para finalizar: ")
+                if opc == "0":
+                    break
                 else:
-                    print("El producto no existe")
+                    opc = int(opc)
+                    producto = buscar_producto(productos_disponibles, opc)
+                    if producto:
+                        cantidad = int(input(f"Ingrese la cantidad de '{producto.desc}' que desea: "))
+                        if cantidad > 0:
+                            if cantidad <= producto.stock:
+                                factura.agregar_producto(producto, cantidad)
+                                producto.stock -= cantidad
+                            else:
+                                print(f"No hay suficiente stock de '{producto.desc}'. Stock disponible: {producto.stock}.")
+                        else:
+                            print("La cantidad ingresada debe ser mayor que cero.")
+                    else:
+                        print("El producto no existe")
+            
+            factura.calcular_factura()
+            facturas.append(factura)
+            
+            os.system("cls" if os.name == "nt" else "clear")
+            print("\n========================= FACTURA =========================")
+            print("ID de Factura:", factura.id)
+            print("Cliente:", factura.cliente)
+            print("Fecha de emisión:", factura.fecha_emision.strftime("%Y-%m-%d %H:%M:%S"))
+            print("------------------------------------------------------------")
+            print("ID   | Descripción       | Precio Unitario | Cantidad | Precio Total")
+            print("------------------------------------------------------------")
+            for producto, cantidad in factura.productos.items():
+                print(f"{producto.id:<5}| {producto.desc:<17}| {producto.precio:^16}| {cantidad:^9}| {producto.precio * cantidad:^13}")
+            print("------------------------------------------------------------")
+            subtotal = sum(producto.precio * cantidad for producto, cantidad in factura.productos.items())
+            impuestos = subtotal * 0.18
+            print("Subtotal:", subtotal)
+            print("Impuestos (18%):", impuestos)
+            print("Total:", subtotal + impuestos)
+            print("============================================================")
+            input("Presione Enter para continuar...")
+
+            os.system("cls" if os.name == "nt" else "clear")
+            print("\n¿Desea agregar otro producto? (s/n)")
+            opc = input().lower()
+            if opc != 's':
+                break
         
-        factura.calcular_factura()
-        facturas.append(factura)
-        
+        factura_id += 1
         os.system("cls" if os.name == "nt" else "clear")
-        print("\n========================= FACTURA =========================")
-        print("ID de Factura:", factura.id)
-        print("Cliente:", factura.cliente)
-        print("Fecha de emisión:", factura.fecha_emision.strftime("%Y-%m-%d %H:%M:%S"))
-        print("------------------------------------------------------------")
-        print("ID   | Descripción       | Precio Unitario | Cantidad | Precio Total")
-        print("------------------------------------------------------------")
-        for producto, cantidad in factura.productos.items():
-            print(f"{producto.id:<5}| {producto.desc:<17}| {producto.precio:^16}| {cantidad:^9}| {producto.precio * cantidad:^13}")
-        print("------------------------------------------------------------")
-        subtotal = sum(producto.precio * cantidad for producto, cantidad in factura.productos.items())
-        impuestos = subtotal * 0.18
-        print("Subtotal:", subtotal)
-        print("Impuestos (18%):", impuestos)
-        print("Total:", subtotal + impuestos)
-        print("============================================================")
-        input("Presione Enter para continuar...")
+        print("\n Ver todas las facturas(s) Agregar otra factura (n)")
+        opc = input().lower()
+        if opc == 's':
+            ver_facturas(facturas)
+            break
 
 def ver_facturas(facturas):
     os.system("cls" if os.name == "nt" else "clear")
@@ -141,8 +158,4 @@ def ver_facturas(facturas):
     input("Presione Enter para continuar...")
 
 facturas = []
-while True:
-    facturar(facturas)
-    opc = input("¿Desea crear otra factura? (s/n): ").lower()
-    if opc != 's':
-        break
+facturar(facturas)
