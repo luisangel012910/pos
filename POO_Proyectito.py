@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+from tabulate import tabulate
 
 class Producto:
     ProductID = 1
@@ -9,34 +11,50 @@ class Producto:
         Producto.ProductID += 1
 
     def mostrarProducto(self):
-        print("ID: ", self.id, " - Nombre: ", self.desc, " - Precio: ", self.precio )
+        return [self.id, self.desc, self.precio]
 
     def getPrecio(self):
         return self.precio
 
-    def getID(self):
-        return self.id
-    
-    def getDesc(self):
-        return self.desc
-    
 class Factura:
     FacturaID = 1
-    def __init__(self, cliente, monto_impuestos, total, productos):
+    def __init__(self, cliente, fecha_emision):
         self.id = Factura.FacturaID
         self.cliente = cliente
-        self.monto_impuestos = monto_impuestos
-        self.total = total
-        self.productos = productos
+        self.fecha_emision = fecha_emision
+        self.monto_impuestos = 0
+        self.total = 0
+        self.productos = {}
 
-    def imprimirProductos(self):
-        for producto in self.productos:
-            producto.mostrarProducto()
+    def agregar_producto(self, producto, cantidad):
+        if producto in self.productos:
+            self.productos[producto] += cantidad
+        else:
+            self.productos[producto] = cantidad
+
+    def calcular_factura(self):
+        self.total = sum(producto.getPrecio() * cantidad for producto, cantidad in self.productos.items())
+        self.monto_impuestos = self.total * 0.18
+
+    def generar_tabla_productos(self):
+        table = []
+        for producto, cantidad in self.productos.items():
+            table.append([producto.id, producto.desc, producto.precio, cantidad, producto.precio * cantidad])
+        return table
 
     def mostrarFactura(self):
-        print("ID: ", self.id, " - Cliente: ", self.cliente, " - Impuestos: ", self.monto_impuestos, " - Total: ", self.total)
-        self.imprimirProductos()
-        print("\n")
+        os.system("cls" if os.name == "nt" else "clear")
+        print("\n========================= FACTURA =========================")
+        print("ID de Factura:", self.id)
+        print("Cliente:", self.cliente)
+        print("Fecha de emisión:", self.fecha_emision.strftime("%Y-%m-%d %H:%M:%S"))
+        print("------------------------------------------------------------")
+        print(tabulate(self.generar_tabla_productos(), headers=["ID", "Descripción", "Precio Unitario", "Cantidad", "Precio Total"], tablefmt="pretty"))
+        print("------------------------------------------------------------")
+        print("Subtotal:", sum(producto.getPrecio() * cantidad for producto, cantidad in self.productos.items()))
+        print("Itebis:", self.total * 0.18)
+        print("Total:", self.total)
+        print("============================================================")
 
 productos = []
 productos.append(Producto("Arroz", 50))
@@ -48,7 +66,7 @@ facturas = []
 def imprimirMenu():
     print("Menú")
     for producto in productos:
-        producto.mostrarProducto()
+        print(producto.mostrarProducto())
 
 def buscar_producto(id):
     for producto in productos:
@@ -56,34 +74,29 @@ def buscar_producto(id):
             return producto
     return None
 
-def calcular_factura(carrito):
-    total = 0
-    for producto in carrito:
-        total += producto.getPrecio()
-    impuestos = total * 0.18
-    return impuestos, total
-
 def facturar():
     nombre_cliente = input("Ingrese su Nombre: ")
-    seguir_facturando = 1
-    while seguir_facturando == 1:
-        carrito = []
-        salir_o_no = 1
-        while salir_o_no == 1:
-            os.system("cls")
-            imprimirMenu()
-            opc = int(input("Ingresa el índice del producto que deseas: "))
-            productoTemp = buscar_producto(opc)
-            if productoTemp:
-                carrito.append(productoTemp)
+    fecha_emision = datetime.now()
+    factura_actual = Factura(nombre_cliente, fecha_emision)
+    while True:
+        os.system("cls" if os.name == "nt" else "clear")
+        imprimirMenu()
+        opc = int(input("Ingrese el ID del producto que desea (0 para finalizar): "))
+        if opc == 0:
+            facturas.append(factura_actual)
+            break
+        producto = buscar_producto(opc)
+        if producto:
+            cantidad = int(input(f"Ingrese la cantidad de '{producto.desc}' que desea: "))
+            if cantidad > 0:
+                factura_actual.agregar_producto(producto, cantidad)
             else:
-                print("El producto no existe")
-            salir_o_no = int(input("Deseas agregar más productos? 1. Sí 2. No: "))
-        impuestos, total = calcular_factura(carrito)
-        facturas.append(Factura(nombre_cliente, impuestos, total, carrito))
-        seguir_facturando = int(input("Deseas seguir facturando? 1. Sí 2. No: "))
+                print("La cantidad debe ser mayor que cero.")
+        else:
+            print("El producto no existe")
 
 facturar()
 
 for factura in facturas:
+    factura.calcular_factura()
     factura.mostrarFactura()
